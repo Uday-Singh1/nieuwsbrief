@@ -1,32 +1,44 @@
 <?php
+date_default_timezone_set('Europe/Amsterdam'); // Stel de tijdzone in op de juiste waarde voor jouw locatie
 
-if(empty($_POST['email'])){
-    echo "no input given";
-    return false;
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 
-}   
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Controleer of het verzoek een POST-verzoek is
 
-function isValidEmail($email) {
-    return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
-}
-
-function isValidPassword($password) {
-    // Controleer of het wachtwoord minimaal 4 tekens lang is en ten minste 1 hoofdletter bevat
-    return (strlen($password) >= 4) && (preg_match('/[A-Z]/', $password) > 0);
-}
-
-
-if (empty($_POST['email']) || empty($_POST['password'])) {
-    echo "Niet alle vereiste velden zijn ingevuld";
-} else {
-    $inputEmail = $_POST['email'];
-    $inputPassword = $_POST['password'];
-    
-    if (isValidEmail($inputEmail) && isValidPassword($inputPassword)) {
-        // Voer hier de verdere verwerking uit, bijv. opslaan in de database (met prepared statements en hashing)
-        echo "Inloggen geslaagd.";
-        // Hier zou je de gebruiker doorverwijzen naar de gewenste pagina na succesvol inloggen.
+    if (empty($_POST['name']) || empty($_POST['email'])) {
+        echo "Niet alle vereiste velden zijn ingevuld";
     } else {
-        echo "Inloggen mislukt. Controleer de ingevoerde gegevens.";
+        $inputName = $_POST['name'];
+        $inputEmail = $_POST['email'];
+
+        // Maak een databaseverbinding
+        $con = new mysqli('db', 'exampleuser', 'examplepass', 'exampledb', 3306);
+        if ($con->connect_error) {
+            die("Connectie mislukt: " . $con->connect_error);
+        }
+
+        // SQL-query om gegevens in te voegen in de 'users'-tabel
+        $sql = "INSERT INTO users (name, email, date, active) VALUES (?, ?, NOW(), 1)";
+        $stmt = $con->prepare($sql);
+        $stmt->bind_param("ss", $inputName, $inputEmail);
+
+        if ($stmt->execute()) {
+            // Gegevens zijn succesvol ingevoegd
+            $insertedDate = date("Y-m-d H:i:s"); // Haal de ingevoegde datum op
+            echo "Gegevens zijn succesvol opgeslagen in de database. Datum van invoeging: $insertedDate";
+        } else {
+            // Er is een fout opgetreden bij het invoegen van de gegevens
+            echo "Fout bij het invoegen van de gegevens in de database: " . $stmt->error;
+        }
+
+        $stmt->close();
+
+        // Sluit de databaseverbinding
+        $con->close();
     }
+} else {
+    echo "Dit script moet worden aangeroepen via een POST-verzoek.";
 }
+?>
